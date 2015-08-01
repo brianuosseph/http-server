@@ -1,5 +1,7 @@
+#include "web_server.h"
+
 int main() {
-  // Create server
-  // Start listening
+  WebServer server = WebServer();
+  server.run();
   return 0;
 }
