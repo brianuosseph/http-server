@@ -1,10 +1,11 @@
 #include "web_server.h"
+#include "http_request.h"
+#include "http_response.h"
 
 WebServer::WebServer() {
   ip_ = IP;
   port_ = PORT;
   web_directory_path_ = WWW_DIR_PATH;
-
   // Load server_info_
   get_server_info();
   // Pass info to socket for creation
@@ -17,6 +18,7 @@ WebServer::WebServer() {
               server_info_->ai_addrlen);
   std::cout << "Server socket created and bound to port "
             << port_ << std::endl;
+  // No longer need server_info_
   freeaddrinfo(server_info_);
 }
 
@@ -44,7 +46,8 @@ void WebServer::get_server_info() {
   std::cout << "Obtained server address info" << std::endl;
 }
 
-// Abstraction of socket() to include error checking.
+// Abstraction of socket() to include error checking. Also sets socket
+// options to allow for quick port reuse after closing program.
 void WebServer::create_socket(int domain,
                               int type,
                               int protocol) {
@@ -55,6 +58,13 @@ void WebServer::create_socket(int domain,
       perror("Couldn't create socket");
       exit(1);
     }
+  }
+  // Set socket options
+  int option_value = 1;
+  if (setsockopt(socket_, SOL_SOCKET, SO_REUSEADDR,
+                 &option_value, sizeof option_value) == -1) {
+    perror("Couldn't set socket options");
+    exit(1);
   }
 }
 
@@ -93,8 +103,7 @@ void WebServer::run() {
   listen_to(socket_, BACKLOG);
   std::cout << "Waiting for connections..." << std::endl;
   while (true) {
-    // Accept connection, if there's an error skip this
-    // iteration (and do not fork).
+    // Accept connection, if there's an error skip (and do not fork).
     client_socket_size_ = sizeof client_addr_;
     client_socket_ = accept(socket_,
                             (struct sockaddr*)& client_addr_,
@@ -108,22 +117,60 @@ void WebServer::run() {
               get_ip_address((struct sockaddr*)& client_addr_),
               client_ip_,
               sizeof client_ip_);
-    std::cout << "Connection to "
+    std::cout << "Connected to "
               << client_ip_ << std::endl;
     // Fork and handle request in child process
     if (!fork()) {
       // Child no longer needs listen
       close(socket_);
-      // TODO: Get HTTP request
-      // Respond to connection
-      if (send(client_socket_, "Hello, world!", 13, 0) == -1) {
-        perror("Error responding");
-      }
-      // Close client socket and exit
+      get_message();
+      // Determine if it's an http request
+      HttpRequest request = ParseHttpRequest(message_buffer_);
+      // Handle request an create response
+      HttpResponse response = handler_.respond_to(request);
+      send_message(response.to_string());
       close(client_socket_);
       exit(0);
     }
     // Client socket handed to child, close in parent process.
     close(client_socket_);
+  }
+}
+
+// Gets message from `client_socket_`.
+void WebServer::get_message() {
+  // Cases:
+  //  -1 = error
+  //   0 = connection closed by client
+  //   n = number of bytes recieved
+  int bytes_recieved = recv(client_socket_, message_buffer_, MSG_BUF_LEN, 0);
+  if (bytes_recieved == -1) {
+    perror("Error getting message");
+    exit(1);
+  }
+  else if (bytes_recieved == 0) {
+    std::cout << client_ip_
+              << " closed connection" << std::endl;
+  }
+  else {
+    std::cout << message_buffer_ << std::endl;
+  }
+}
+
+// Sends message to `client_socket_`.
+void WebServer::send_message(std::string message) {
+  int message_len = strlen(message.c_str());
+  int bytes_sent = 0;
+  int total_bytes_sent = 0;
+  while (bytes_sent != message_len) {
+    bytes_sent = send(client_socket_, message.c_str(), message_len, 0);
+    if (bytes_sent == -1) {
+      perror("Error sending message");
+      break;
+      exit(1);
+    }
+    else {
+      total_bytes_sent += bytes_sent;
+    }
   }
 }

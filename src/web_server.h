@@ -10,10 +10,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include "http_handler.h"
+
 #define IP "127.0.0.1"
 #define PORT "8080"
 #define WWW_DIR_PATH "./www"
 #define BACKLOG 5
+#define MSG_BUF_LEN 512
 
 class WebServer {
 private:
@@ -42,6 +45,15 @@ private:
   void listen_to(int socket,
                  int backlog);
   void* get_ip_address(struct sockaddr* socket_address);
+
+  // Message handling
+  HttpHandler handler_;
+  char message_buffer_[MSG_BUF_LEN];
+  void get_message();
+  void send_message(std::string message);
+
+  // File handling
+
 
 public:
   WebServer();
