@@ -127,7 +127,7 @@ void WebServer::run() {
       // Determine if it's an http request
       HttpRequest request = ParseHttpRequest(message_buffer_);
       // Handle request an create response
-      HttpResponse response = handler_.respond_to(request);
+      HttpResponse response = handler_.respond_to(request, web_directory_path_);
       send_message(response.to_string());
       close(client_socket_);
       exit(0);
@@ -173,4 +173,5 @@ void WebServer::send_message(std::string message) {
       total_bytes_sent += bytes_sent;
     }
   }
+  std::cout << message << std::endl;
 }

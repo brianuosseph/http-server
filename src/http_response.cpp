@@ -1,5 +1,7 @@
 #include "http_response.h"
 
+#include <fstream>
+#include <iostream>
 #include <sstream>
 
 std::string HttpResponse::to_string() {
@@ -25,9 +27,19 @@ std::string HttpResponse::to_string() {
       break;
   }
   // TODO: Check resource_path extension for content type
+  // Additional headers would go here.
   // End HTTP header
   message_stream << CRLF;
   // Append body by reading resource_path file
-  message_stream << "<html><body><h1>Hello, World!</h1></body></html>";
+  std::ifstream file;
+  file.open(resource_path, std::ifstream::in);
+  if (file.is_open()) {
+    message_stream << file.rdbuf();
+  }
+  else if (status != NOT_FOUND) {
+    std::cout << "Error adding requrested file to response message." << std::endl;
+
+  }
+  file.close();
   return message_stream.str();
 }

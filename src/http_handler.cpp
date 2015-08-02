@@ -1,7 +1,13 @@
 #include "http_handler.h"
 
+#include <iostream>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 // Inteprets request and returns a correct `HttpResponse`
-HttpResponse HttpHandler::respond_to(HttpRequest request) {
+HttpResponse HttpHandler::respond_to(HttpRequest request,
+                                     std::string& www_dir_path) {
   HttpResponse response;
   response.resource_path = "";
   // Check if HTTP version is supported
@@ -12,13 +18,22 @@ HttpResponse HttpHandler::respond_to(HttpRequest request) {
   // Check HTTP method and check for valid file path
   switch (request.method) {
     case GET:
-      // bool found = is_valid_path(request.uri);
+      // Map root uri to index.html
       if (request.uri == "/") {
-        // return index.html
-        response.status = OK;
+        request.uri = "/index.html";
       }
-      // else if (request.uri == some_file) {}
+      request.uri = www_dir_path + request.uri;
+      std::cout << "Request URI mapped to "
+                << request.uri << std::endl;
+      // Check if resource exists 
+      struct stat buffer;
+      if (stat(request.uri.c_str(), &buffer) != -1
+          && S_ISREG(buffer.st_mode)) {
+        response.status = OK;
+        response.resource_path = request.uri;
+      }
       else {
+        perror("Error checking for file stats");
         response.status = NOT_FOUND;
       }
       break;
