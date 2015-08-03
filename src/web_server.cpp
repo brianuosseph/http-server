@@ -2,7 +2,16 @@
 #include "http_request.h"
 #include "http_response.h"
 
-#include <fstream>
+// TODO:
+//  - CGI Script support (dynamic pages)
+//    - Take URL query variables and use them as environment
+//    - variables for a program
+//    - Shell out request CGI headers to program. And send
+//      stdout of program to client.
+//  - Cookies
+//  - Create simple question survey using CGI scripts to create
+//    and print questions, and cookies from keeping track of
+//    number of wrong answers and print results
 
 WebServer::WebServer() {
   ip_ = IP;
@@ -22,6 +31,8 @@ WebServer::WebServer() {
             << port_ << std::endl;
   // No longer need server_info_
   freeaddrinfo(server_info_);
+  // Set up signal handling
+  set_reaper();
 }
 
 WebServer::~WebServer() {
@@ -81,6 +92,26 @@ void WebServer::bind_socket(int socket,
   }
 }
 
+// Signal hanlder for zombies.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+void sigchld_handler(int signal) {
+  while (waitpid(-1, NULL, WNOHANG) > 0);
+}
+#pragma clang diagnostic pop
+
+// Sets up the signal handler used for handling zombies.
+void WebServer::set_reaper() {
+  memset(&signal_action_, 0, sizeof(struct sigaction));
+  sigemptyset(&signal_action_.sa_mask);
+  signal_action_.sa_handler = sigchld_handler;
+  signal_action_.sa_flags = SA_RESTART;
+  if (sigaction(SIGCHLD, &signal_action_, NULL) == -1) {
+    perror("Error setting up signal handler");
+    exit(1);
+  }
+}
+
 // Abstraction of listen() to include error checking.
 void WebServer::listen_to(int socket,
                           int backlog) {
@@ -123,17 +154,22 @@ void WebServer::run() {
     std::cout << "Connected to "
               << client_ip_ << std::endl;
     // Fork and handle request in child process
-    if (!fork()) {
+    int cpid = fork();
+    if (cpid == -1) {
+      perror("Error creating child process");
+    }
+    // Child process
+    else if (cpid == 0) {
       // Child no longer needs listen
       close(socket_);
       get_message();
       // Determine if it's an HTTP request
       HttpRequest request = handler_.parse_message(message_buffer_);
       // Create HTTP response
-      HttpResponse response = handler_.create_response(request, web_directory_path_);
-
+      HttpResponse response
+        = handler_.create_response(request, web_directory_path_);
+      // Send response
       respond_with_static_page(response);
-
       // TODO: Persistent connections
       // - Only close connection if requested by user, or
       // - If server responds with Connection header specifying the
@@ -141,8 +177,11 @@ void WebServer::run() {
       close(client_socket_);
       exit(0);
     }
-    // Client socket handed to child, close in parent process.
-    close(client_socket_);
+    // Parent process
+    else {
+      // Client socket handed to child, close in parent process.
+      close(client_socket_);
+    }
   }
 }
 

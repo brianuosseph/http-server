@@ -1,13 +1,16 @@
 #ifndef WEB_SERVER_H
 #define WEB_SERVER_H
 
+#include <fstream>
 #include <iostream>
 
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include "http_handler.h"
@@ -42,6 +45,7 @@ private:
   void bind_socket(int socket,
                    struct sockaddr* socket_address,
                    int address_len);
+  void set_reaper();
   void listen_to(int socket,
                  int backlog);
   void* get_ip_address(struct sockaddr* socket_address);
@@ -52,15 +56,16 @@ private:
   void get_message();
   void send_message(std::string message);
 
+  // Signal handling
+  struct sigaction signal_action_;
+
+  // File handling
+  void respond_with_static_page(HttpResponse response);
 
 public:
   WebServer();
   ~WebServer();
   void run();
-
-  // File handling
-  void respond_with_static_page(HttpResponse response);
-
 };
 
 #endif  // WEB_SERVER_H
