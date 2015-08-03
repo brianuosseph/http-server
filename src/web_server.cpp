@@ -2,6 +2,8 @@
 #include "http_request.h"
 #include "http_response.h"
 
+#include <fstream>
+
 WebServer::WebServer() {
   ip_ = IP;
   port_ = PORT;
@@ -101,7 +103,8 @@ void* WebServer::get_ip_address(struct sockaddr* socket_address) {
 // Start listening for connections and handling requests.
 void WebServer::run() {
   listen_to(socket_, BACKLOG);
-  std::cout << "Waiting for connections..." << std::endl;
+  std::cout << "Waiting for connections..."
+            << std::endl << std::endl;
   while (true) {
     // Accept connection, if there's an error skip (and do not fork).
     client_socket_size_ = sizeof client_addr_;
@@ -124,11 +127,17 @@ void WebServer::run() {
       // Child no longer needs listen
       close(socket_);
       get_message();
-      // Determine if it's an http request
-      HttpRequest request = ParseHttpRequest(message_buffer_);
-      // Handle request an create response
-      HttpResponse response = handler_.respond_to(request, web_directory_path_);
-      send_message(response.to_string());
+      // Determine if it's an HTTP request
+      HttpRequest request = handler_.parse_message(message_buffer_);
+      // Create HTTP response
+      HttpResponse response = handler_.create_response(request, web_directory_path_);
+
+      respond_with_static_page(response);
+
+      // TODO: Persistent connections
+      // - Only close connection if requested by user, or
+      // - If server responds with Connection header specifying the
+      //   client to close the connection and stop sending requests
       close(client_socket_);
       exit(0);
     }
@@ -139,6 +148,9 @@ void WebServer::run() {
 
 // Gets message from `client_socket_`.
 void WebServer::get_message() {
+  std::cout << "Request from "
+            << client_ip_
+            << std::endl;
   // Cases:
   //  -1 = error
   //   0 = connection closed by client
@@ -150,19 +162,24 @@ void WebServer::get_message() {
   }
   else if (bytes_recieved == 0) {
     std::cout << client_ip_
-              << " closed connection" << std::endl;
+              << " closed connection";
   }
   else {
-    std::cout << message_buffer_ << std::endl;
+    std::cout << message_buffer_;
   }
+  std::cout << "----------------------------------------"
+            << std::endl;
 }
 
 // Sends message to `client_socket_`.
 void WebServer::send_message(std::string message) {
+  std::cout << "Response to "
+            << client_ip_
+            << std::endl;
   int message_len = strlen(message.c_str());
   int bytes_sent = 0;
   int total_bytes_sent = 0;
-  while (bytes_sent != message_len) {
+  while (total_bytes_sent != message_len) {
     bytes_sent = send(client_socket_, message.c_str(), message_len, 0);
     if (bytes_sent == -1) {
       perror("Error sending message");
@@ -173,5 +190,68 @@ void WebServer::send_message(std::string message) {
       total_bytes_sent += bytes_sent;
     }
   }
-  std::cout << message << std::endl;
+  std::cout << message
+            << std::endl
+            << "----------------------------------------"
+            << std::endl;
 }
+
+void WebServer::respond_with_static_page(HttpResponse response) {
+  // Create HTTP message header
+  std::string message_header = response.create_message_header();
+  int message_len = strlen(message_header.c_str());
+  int bytes_sent = 0;
+  int total_bytes_sent = 0;
+  while (total_bytes_sent != message_len) {
+    bytes_sent = send(client_socket_, message_header.c_str(), message_len, 0);
+    if (bytes_sent == -1) {
+      perror("Error sending message header");
+      break;
+      exit(1);
+    }
+    else {
+      total_bytes_sent += bytes_sent;
+    }
+  }
+  std::cout << message_header
+            << std::endl;
+  // Send file data
+  if (!response.resource_path.empty()) {
+    char buffer[512];
+    std::ifstream file;
+    file.open(response.resource_path, std::ios::in | std::ios::binary);
+    if (file.is_open()) {
+      // Get file length
+      file.seekg(0, file.end);
+      int total_bytes = file.tellg();
+      file.seekg(0, file.beg);
+      // Read file and 
+      int bytes_read = 0;
+      int bytes_sent = 0;
+      int total_bytes_sent = 0;
+      while (total_bytes_sent != total_bytes) {
+        file.read(buffer, 512);
+        bytes_read = file.gcount();
+
+        bytes_sent = send(client_socket_, buffer, bytes_read, 0);
+        if (bytes_sent == -1 || bytes_sent != bytes_read) {
+          perror("Error sending message");
+          break;
+          exit(1);
+        }
+        else {
+          total_bytes_sent += bytes_sent;
+        }
+      }
+    }
+    else {
+      std::cout << "Error opening requested file"
+                << std::endl;
+    }
+    file.close();
+  }
+  std::cout << "----------------------------------------"
+            << std::endl;
+}
+
+

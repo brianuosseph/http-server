@@ -10,7 +10,7 @@ public:
   HttpStatus status;
   std::string resource_path;
 
-  std::string to_string();
+  std::string create_message_header();
 };
 
 #endif  // HTTP_RESPONSE_H

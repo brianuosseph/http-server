@@ -4,7 +4,7 @@
 #include <iostream>
 #include <sstream>
 
-std::string HttpResponse::to_string() {
+std::string HttpResponse::create_message_header() {
   std::stringstream message_stream;
   // Write status line
   message_stream << HTTP_1_1 << " ";
@@ -28,18 +28,12 @@ std::string HttpResponse::to_string() {
   }
   // TODO: Check resource_path extension for content type
   // Additional headers would go here.
+
+  // TODO: Persistent connections
+  //  - HTTP 1.1 spec says to alway respond with this header
+  //    if connection is going to be closed.
+  message_stream << "Connection: close" << CRLF;
   // End HTTP header
   message_stream << CRLF;
-  // Append body by reading resource_path file
-  std::ifstream file;
-  file.open(resource_path, std::ifstream::in);
-  if (file.is_open()) {
-    message_stream << file.rdbuf();
-  }
-  else if (status != NOT_FOUND) {
-    std::cout << "Error adding requrested file to response message." << std::endl;
-
-  }
-  file.close();
   return message_stream.str();
 }

@@ -52,13 +52,15 @@ private:
   void get_message();
   void send_message(std::string message);
 
-  // File handling
-
 
 public:
   WebServer();
   ~WebServer();
   void run();
+
+  // File handling
+  void respond_with_static_page(HttpResponse response);
+
 };
 
 #endif  // WEB_SERVER_H

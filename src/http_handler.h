@@ -9,8 +9,10 @@ class HttpHandler {
 public:
   HttpHandler() {};
   ~HttpHandler() {};
-  HttpResponse respond_to(HttpRequest request,
-                          std::string& www_dir_path);
+
+  HttpRequest parse_message(char* message);
+  HttpResponse create_response(HttpRequest request,
+                               std::string& www_dir_path);
 };
 
 #endif  // HTTP_HANDLER_H
