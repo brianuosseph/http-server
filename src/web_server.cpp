@@ -2,6 +2,8 @@
 #include "http_request.h"
 #include "http_response.h"
 
+#include <sstream>
+
 // TODO:
 //  - CGI Script support (dynamic pages)
 //    - Take URL query variables and use them as environment
@@ -162,13 +164,16 @@ void WebServer::run() {
     else if (cpid == 0) {
       // Child no longer needs listen
       close(socket_);
-      get_message();
+      std::string msg = get_message();
       // Determine if it's an HTTP request
-      HttpRequest request = handler_.parse_message(message_buffer_);
+      HttpRequest request = handler_.parse_message(msg);
       // Create HTTP response
       HttpResponse response
         = handler_.create_response(request, web_directory_path_);
       // Send response
+      // TODO: CGI Support (Dynamic pages)
+      // - Accpet query variables and shell to other program
+      // - Stdout of program is response text
       respond_with_static_page(response);
       // TODO: Persistent connections
       // - Only close connection if requested by user, or
@@ -186,28 +191,35 @@ void WebServer::run() {
 }
 
 // Gets message from `client_socket_`.
-void WebServer::get_message() {
+std::string WebServer::get_message() {
   std::cout << "Request from "
-            << client_ip_
-            << std::endl;
-  // Cases:
-  //  -1 = error
-  //   0 = connection closed by client
-  //   n = number of bytes recieved
-  int bytes_recieved = recv(client_socket_, message_buffer_, MSG_BUF_LEN, 0);
-  if (bytes_recieved == -1) {
-    perror("Error getting message");
-    exit(1);
+            << client_ip_ << std::endl;
+  std::stringstream message;
+  int bytes_recieved = 0;
+  while (true) {
+    bytes_recieved = recv(client_socket_, message_buffer_, MSG_BUF_LEN, 0);
+    if (bytes_recieved == -1) {
+      perror("Error getting message");
+      exit(1);
+    }
+    if (bytes_recieved == 0) {
+      std::cout << client_ip_ << " closed connection";
+      break;
+    }
+    if (bytes_recieved < MSG_BUF_LEN) {
+      for (int i = 0; i < bytes_recieved; ++i) {
+        message << message_buffer_[i];
+      }
+      break;
+    }
+    else {
+      message << message_buffer_;
+    }
   }
-  else if (bytes_recieved == 0) {
-    std::cout << client_ip_
-              << " closed connection";
-  }
-  else {
-    std::cout << message_buffer_;
-  }
+  std::cout << message.str() << std::endl;
   std::cout << "----------------------------------------"
             << std::endl;
+  return message.str();
 }
 
 // Sends message to `client_socket_`.

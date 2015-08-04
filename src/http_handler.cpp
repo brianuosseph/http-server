@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-HttpRequest HttpHandler::parse_message(char* message) {
+HttpRequest HttpHandler::parse_message(std::string message) {
   std::stringstream msg_stream;
   msg_stream.str(message);
   HttpRequest request;
@@ -24,6 +24,8 @@ HttpRequest HttpHandler::parse_message(char* message) {
   // Get HTTP version
   msg_stream >> request.version;
   // Ignoring all other headers and request body
+  // TODO: Support Cookies
+  // Save cookies to request
   return request;
 }
 
@@ -46,6 +48,7 @@ HttpResponse HttpHandler::create_response(HttpRequest request,
       request.uri = www_dir_path + request.uri;
       std::cout << "Request URI mapped to "
                 << request.uri << std::endl;
+      // TODO: Check if file path is within www_dir_path
       // Check if resource exists 
       struct stat buffer;
       if (stat(request.uri.c_str(), &buffer) != -1
@@ -63,5 +66,7 @@ HttpResponse HttpHandler::create_response(HttpRequest request,
       response.status = INTERNAL_ERROR;
       break;
   }
+  // TODO: Support Cookies
+  // Parse or save cookies for response
   return response;
 }

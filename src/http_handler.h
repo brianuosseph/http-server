@@ -10,7 +10,7 @@ public:
   HttpHandler() {};
   ~HttpHandler() {};
 
-  HttpRequest parse_message(char* message);
+  HttpRequest parse_message(std::string message);
   HttpResponse create_response(HttpRequest request,
                                std::string& www_dir_path);
 };

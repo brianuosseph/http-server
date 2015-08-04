@@ -53,7 +53,7 @@ private:
   // Message handling
   HttpHandler handler_;
   char message_buffer_[MSG_BUF_LEN];
-  void get_message();
+  std::string get_message();
   void send_message(std::string message);
 
   // Signal handling
