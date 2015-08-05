@@ -55,11 +55,11 @@ std::string HttpResponse::create_message_header() {
   else {
     message_stream << "text/plain" << CRLF;
   }
-
   // TODO: Persistent connections
   //  - HTTP 1.1 spec says to alway respond with this header
   //    if connection is going to be closed.
   message_stream << "Connection: close" << CRLF;
+  // TODO: Cookie Support
   // End HTTP header
   message_stream << CRLF;
   return message_stream.str();

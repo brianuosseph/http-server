@@ -15,4 +15,6 @@ public:
                                std::string& www_dir_path);
 };
 
+std::string trim(std::string& str);
+
 #endif  // HTTP_HANDLER_H

@@ -170,6 +170,8 @@ void WebServer::run() {
       // Create HTTP response
       HttpResponse response
         = handler_.create_response(request, web_directory_path_);
+      // TODO: Cookie support
+      
       // Send response
       // TODO: CGI Support (Dynamic pages)
       // - Accpet query variables and shell to other program
