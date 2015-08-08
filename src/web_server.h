@@ -38,6 +38,7 @@ private:
   char client_ip_[INET6_ADDRSTRLEN];
 
   // Set up functions
+  std::string set_www_dir_path(std::string relative_path);
   void get_server_info();
   void create_socket(int domain,
                      int type,
@@ -59,8 +60,15 @@ private:
   // Signal handling
   struct sigaction signal_action_;
 
+  // CGI handling
+  void generate_environment(char** envp,
+                            HttpResponse response,
+                            std::map<std::string, std::string> request_headers);
+
   // File handling
   void respond_with_static_page(HttpResponse response);
+  void respond_with_cgi_script(HttpResponse response,
+                               std::map<std::string, std::string> request_headers);
 
 public:
   WebServer();

@@ -21,7 +21,7 @@ HttpRequest HttpHandler::parse_message(std::string message) {
   std::stringstream msg_stream;
   msg_stream.str(message);
   HttpRequest request;
-  std::string method;
+  std::string method, url;
   // Get HTTP method
   msg_stream >> method;
   if (method == GET_STR) {
@@ -30,8 +30,17 @@ HttpRequest HttpHandler::parse_message(std::string message) {
   else {
     request.method = UNKNOWN;
   }
-  // Get resource URI
-  msg_stream >> request.uri;
+  // Get resource URI and query string
+  msg_stream >> url;
+  std::size_t query_start = url.find_first_of("?");
+  if (query_start == std::string::npos) {
+    request.uri = url;
+    request.query = "";
+  }
+  else {
+    request.uri = url.substr(0, query_start);
+    request.query = url.substr(query_start + 1);
+  }
   // Get HTTP version
   msg_stream >> request.version;
   // Get headers
@@ -94,6 +103,35 @@ HttpResponse HttpHandler::create_response(HttpRequest request,
     default:
       response.status = INTERNAL_ERROR;
       break;
+  }
+  // Set up query
+  if (!request.query.empty()) {
+    std::size_t tag_start = 0;
+    std::size_t tag_end, value_end;
+    std::string tag, value;
+    while (true) {
+      tag_end = request.query.find_first_of("=", tag_start);
+      // Tag with no value
+      if (tag_end == std::string::npos) {
+        break;
+      }
+      value_end = request.query.find_first_of("&", tag_end + 1);
+      tag = request.query.substr(tag_start, tag_end - tag_start);
+      // No more tags
+      if (value_end == std::string::npos) {
+        value = request.query.substr(tag_end + 1);
+        response.query[tag] = value;
+        break;
+      }
+      // More tags to read
+      else {
+        value = request.query.substr(tag_end + 1, value_end - (tag_end + 1));
+        response.query[tag] = value;
+        ++value_end;
+        tag_start = value_end;
+      }
+    }
+    response.query_string = request.query;
   }
   // TODO: Support Cookies
   // Parse or save cookies for response
