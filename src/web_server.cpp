@@ -352,7 +352,7 @@ void WebServer::respond_with_cgi_script(
   // Generate environment variables.
   // Pass query string to environment.
   std::string q_str = "QUERY_STRING=";
-  q_str += response.query_string;
+  q_str += response.query;
   char* env_query = new char[q_str.size() + 1];
   std::strcpy(env_query, q_str.c_str());
   // Pass cookies to environment.

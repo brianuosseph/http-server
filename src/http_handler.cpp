@@ -137,35 +137,7 @@ HttpResponse HttpHandler::create_response(
       response.status = INTERNAL_ERROR;
       break;
   }
-  // Set up query
-  if (!request.query.empty()) {
-    std::size_t tag_start = 0;
-    std::size_t tag_end, value_end;
-    std::string tag, value;
-    while (true) {
-      tag_end = request.query.find_first_of("=", tag_start);
-      // Tag with no value
-      if (tag_end == std::string::npos) {
-        break;
-      }
-      value_end = request.query.find_first_of("&", tag_end + 1);
-      tag = request.query.substr(tag_start, tag_end - tag_start);
-      // No more tags
-      if (value_end == std::string::npos) {
-        value = request.query.substr(tag_end + 1);
-        response.query[tag] = value;
-        break;
-      }
-      // More tags to read
-      else {
-        value = request.query.substr(tag_end + 1, value_end - (tag_end + 1));
-        response.query[tag] = value;
-        ++value_end;
-        tag_start = value_end;
-      }
-    }
-    response.query_string = request.query;
-  }
-  // Parse or save cookies for response
+  // Pass query to response
+  response.query = request.query;
   return response;
 }
