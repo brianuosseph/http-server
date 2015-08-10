@@ -7,6 +7,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "url/util.h"
+
 std::string trim(std::string str) {
   std::size_t str_start = str.find_first_not_of(" \t\r");
   if (str_start == std::string::npos) {
@@ -32,6 +34,7 @@ HttpRequest HttpHandler::parse_message(std::string message) {
   }
   // Get resource URI and query string
   msg_stream >> url;
+  url = url::decode(url);
   std::size_t query_start = url.find_first_of("?");
   if (query_start == std::string::npos) {
     request.uri = url;
@@ -133,7 +136,6 @@ HttpResponse HttpHandler::create_response(HttpRequest request,
     }
     response.query_string = request.query;
   }
-  // TODO: Support Cookies
   // Parse or save cookies for response
   return response;
 }
