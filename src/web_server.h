@@ -61,14 +61,16 @@ private:
   struct sigaction signal_action_;
 
   // CGI handling
-  void generate_environment(char** envp,
-                            HttpResponse response,
-                            std::map<std::string, std::string> request_headers);
+  void generate_environment(
+      char** envp,
+      HttpResponse response,
+      std::map<std::string, std::string> request_headers);
 
   // File handling
   void respond_with_static_page(HttpResponse response);
   void respond_with_cgi_script(HttpResponse response,
-                               std::map<std::string, std::string> request_headers);
+                               std::map<std::string,
+                               std::string> request_headers);
 
 public:
   WebServer();

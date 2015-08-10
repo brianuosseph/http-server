@@ -13,6 +13,11 @@ public:
   HttpRequest parse_message(std::string message);
   HttpResponse create_response(HttpRequest request,
                                std::string& www_dir_path);
+private:
+  HttpMethod read_method(std::string& str);
+  void map_and_find_resource(HttpRequest& request,
+                             std::string& www_dir_path,
+                             HttpResponse& response);
 };
 
 std::string trim(std::string& str);

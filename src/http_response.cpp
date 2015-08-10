@@ -12,6 +12,9 @@ std::string HttpResponse::create_message_header() {
     case OK:
       message_stream << OK_STR << CRLF;
       break;
+    case FORBIDDEN:
+      message_stream << FORBIDDEN_STR << CRLF;
+      break;
     case NOT_FOUND:
       message_stream << NOT_FOUND_STR << CRLF;
       break;

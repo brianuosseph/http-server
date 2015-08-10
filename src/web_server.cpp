@@ -9,6 +9,7 @@
 // TODO:
 //  - Add POST support
 //    - This requires URL/Percent coding implementation
+//    - POST supported CGI scripts take in variables from stdin
 //  - Implement persistent connections
 //    - Apache uses a 5 second timeout
 //  - Refactor
@@ -71,9 +72,11 @@ void WebServer::get_server_info() {
 
 // Abstraction of socket() to include error checking. Also sets socket
 // options to allow for quick port reuse after closing program.
-void WebServer::create_socket(int domain,
-                              int type,
-                              int protocol) {
+void WebServer::create_socket(
+  //
+    int domain,
+    int type,
+    int protocol) {
   // Create socket if it doesn't exist.
   if (socket_ == -1) {
     socket_ = socket(domain, type, protocol);
@@ -92,9 +95,11 @@ void WebServer::create_socket(int domain,
 }
 
 // Abstraction of bind() to include error checking.
-void WebServer::bind_socket(int socket,
-                            struct sockaddr* socket_address,
-                            int address_len) {
+void WebServer::bind_socket(
+  //
+    int socket,
+    struct sockaddr* socket_address,
+    int address_len) {
   // Remember all ports under 1024 are reserved for the super user.
   if (bind(socket, socket_address, address_len) == -1) {
     perror("Couldn't bind socket to port");
@@ -123,8 +128,10 @@ void WebServer::set_reaper() {
 }
 
 // Abstraction of listen() to include error checking.
-void WebServer::listen_to(int socket,
-                          int backlog) {
+void WebServer::listen_to(
+  //
+    int socket,
+    int backlog) {
   if (listen(socket, backlog) == -1) {
     perror("Couldn't listen to socket");
     exit(1);
@@ -337,8 +344,11 @@ void WebServer::respond_with_static_page(HttpResponse response) {
 // responses, the server only creates the status-line to indicate a successful
 // request. All remaining headers, and the message body, are created by the
 // requested CGI script.
-void WebServer::respond_with_cgi_script(HttpResponse response,
-                                        std::map<std::string, std::string> request_headers) {
+void WebServer::respond_with_cgi_script(
+  //
+    HttpResponse response,
+    std::map<std::string,
+    std::string> request_headers) {
   // Generate environment variables.
   // Pass query string to environment.
   std::string q_str = "QUERY_STRING=";
@@ -379,6 +389,9 @@ void WebServer::respond_with_cgi_script(HttpResponse response,
     close(pipefd[1]);
     // `execve` accepts environment variables.
     if (execve(exec_argv[0], exec_argv, exec_envp) == -1) {
+      // TODO: Refactor - Send appropriate HTTP errors messages
+      // If errno == EACCESS send 403
+      // Else 500
       perror("Error executing CGI script");
       exit(1);
     }

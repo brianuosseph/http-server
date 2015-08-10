@@ -19,6 +19,58 @@ std::string trim(std::string str) {
   return str.substr(str_start, str_length);
 }
 
+HttpMethod HttpHandler::read_method(std::string& str) {
+  if (str == OPTIONS_STR) {
+    return OPTIONS;
+  }
+  else if (str == GET_STR) {
+    return GET;
+  }
+  else if (str == HEAD_STR) {
+    return HEAD;
+  }
+  else if (str == POST_STR) {
+    return POST;
+  }
+  else if (str == DELETE_STR) {
+    return DELETE;
+  }
+  else if (str == TRACE_STR) {
+    return TRACE;
+  }
+  else if (str == CONNECT_STR) {
+    return CONNECT;
+  }
+  else {
+    return UNKNOWN;
+  }
+}
+
+void HttpHandler::map_and_find_resource(
+  //
+    HttpRequest& request,
+    std::string& www_dir_path,
+    HttpResponse& response) {
+  // Map root uri to index.html
+  if (request.uri == "/") {
+    request.uri = "/index.html";
+  }
+  request.uri = www_dir_path + request.uri;
+  std::cout << "Request URI mapped to "
+            << request.uri << std::endl;
+  // Check if resource exists 
+  struct stat buffer;
+  if (stat(request.uri.c_str(), &buffer) != -1
+      && S_ISREG(buffer.st_mode)) {
+    response.status = OK;
+    response.resource_path = request.uri;
+  }
+  else {
+    perror("Error checking for file stats");
+    response.status = NOT_FOUND;
+  }
+}
+
 HttpRequest HttpHandler::parse_message(std::string message) {
   std::stringstream msg_stream;
   msg_stream.str(message);
@@ -26,13 +78,8 @@ HttpRequest HttpHandler::parse_message(std::string message) {
   std::string method, url;
   // Get HTTP method
   msg_stream >> method;
-  if (method == GET_STR) {
-    request.method = GET;
-  }
-  else {
-    request.method = UNKNOWN;
-  }
-  // Get resource URI and query string
+  request.method = this->read_method(method);
+  // Decode and get resource URI and query string
   msg_stream >> url;
   url = url::decode(url);
   std::size_t query_start = url.find_first_of("?");
@@ -65,13 +112,13 @@ HttpRequest HttpHandler::parse_message(std::string message) {
     }  
   }
   request.headers = headers;
-  // TODO: Support Cookies
-  // Save cookies to request
   return request;
 }
 
-HttpResponse HttpHandler::create_response(HttpRequest request,
-                                          std::string& www_dir_path) {
+HttpResponse HttpHandler::create_response(
+  //
+    HttpRequest request,
+    std::string& www_dir_path) {
   HttpResponse response;
   response.resource_path = "";
   // Check if HTTP version is supported
@@ -82,26 +129,9 @@ HttpResponse HttpHandler::create_response(HttpRequest request,
   // Check HTTP method and check for valid file path
   switch (request.method) {
     case GET:
-      // Map root uri to index.html
-      if (request.uri == "/") {
-        request.uri = "/index.html";
-      }
-      request.uri = www_dir_path + request.uri;
-      std::cout << "Request URI mapped to "
-                << request.uri << std::endl;
-      // TODO: Check if file path is within www_dir_path
-      // Check if resource exists 
-      struct stat buffer;
-      if (stat(request.uri.c_str(), &buffer) != -1
-          && S_ISREG(buffer.st_mode)) {
-        response.status = OK;
-        response.resource_path = request.uri;
-      }
-      else {
-        perror("Error checking for file stats");
-        response.status = NOT_FOUND;
-      }
+      this->map_and_find_resource(request, www_dir_path, response);
       break;
+    // Unimplemented methods result in 505 response.
     case UNKNOWN:
     default:
       response.status = INTERNAL_ERROR;
