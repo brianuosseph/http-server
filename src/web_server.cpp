@@ -7,15 +7,13 @@
 #include <stdlib.h>
 
 // TODO:
-//  - CGI Script support (dynamic pages)
-//    - Take URL query variables and use them as environment
-//    - variables for a program
-//    - Shell out request CGI headers to program. And send
-//      stdout of program to client.
-//  - Cookies
-//  - Create simple question survey using CGI scripts to create
-//    and print questions, and cookies from keeping track of
-//    number of wrong answers and print results
+//  - Add POST support
+//    - This requires URL/Percent coding implementation
+//  - Implement persistent connections
+//    - Apache uses a 5 second timeout
+//  - Refactor
+//    - Use of requests in run()
+//    - Passing of environment variables to CGI, many not currently supported
 
 WebServer::WebServer() {
   ip_ = IP;
@@ -177,15 +175,24 @@ void WebServer::run() {
       std::string msg = get_message();
       // Determine if it's an HTTP request
       HttpRequest request = handler_.parse_message(msg);
+
+      // NOTE: REFACTOR
+      //  - Creating a response struct prior to respond matching creates some
+      //    overhead as not all the fields are used by all responses, so there's
+      //    unnecessary parsing when it's not a static page request.
+      //  - Just get the extension from the request url, match, and call the
+      //    correct response function.
+      //  - Within the response function create and send the HttpResponse
+      //  - Parts of the HttpRequest parsing will need to be changed to public
+      //    functions.
+      //  - This is also needed in order to easily pass PATH_INFO to CGI scripts
+      //    without adding another field to HttpResponse.
+
       // Create HTTP response
       HttpResponse response
         = handler_.create_response(request, web_directory_path_);
-      // TODO: Cookie support
       
       // Send response
-      // TODO: CGI Support (Dynamic pages)
-      // - Accpet query variables and shell to other program
-      // - Stdout of program is response text
       std::size_t ext_start = response.resource_path.find_last_of(".");
       std::string extension = response.resource_path
                               .substr(ext_start + 1);
