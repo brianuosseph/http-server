@@ -1,0 +1,66 @@
+body, section {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+body {
+  background: #fff;
+  color: #272727;
+  font-family: Helvetica, sans-serif;
+}
+
+.header {
+  background: #373737;
+  color: #f7f7f7;
+  padding: 12px 20px 12px;
+}
+
+.header a:active,
+.header a:hover,
+.header a:focus,
+.header a:visited {
+  color: #f7f7f7;
+}
+
+.header h1,
+.header h2,
+.header h3,
+.header h4,
+.header h5,
+.header h6,
+.header p,
+.header a,
+.header a:active,
+.header a:hover,
+.header a:focus,
+.header a:visited {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: inline-block;
+  text-decoration: none;
+}
+
+#survey-quit {
+  float: right;
+  height: 33px;
+  width: 33px;
+  text-align: center;
+  box-sizing: border-box;
+  margin-top: 8px;
+}
+
+.content {
+  padding: 20px 20px 12px;
+}
+
+.content h1,
+.content h2,
+.content h3,
+.content h4,
+.content h5,
+.content h6,
+.content p {
+  margin-top: 0;
+}
