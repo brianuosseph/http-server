@@ -71,21 +71,17 @@ void HttpHandler::map_and_find_resource(
   }
 }
 
-HttpRequest HttpHandler::parse_message(std::string message) {
-  std::stringstream msg_stream;
-  msg_stream.str(message);
-  HttpRequest request;
+void HttpHandler::parse_msg_header(std::stringstream& msg_stream, HttpRequest& request) {
   std::string method, url;
   // Get HTTP method
   msg_stream >> method;
   request.method = this->read_method(method);
-  // Decode and get resource URI and query string
+  // Get resource URI and query string, if it exists
   msg_stream >> url;
   url = url::decode(url);
   std::size_t query_start = url.find_first_of("?");
   if (query_start == std::string::npos) {
     request.uri = url;
-    request.query = "";
   }
   else {
     request.uri = url.substr(0, query_start);
@@ -93,12 +89,12 @@ HttpRequest HttpHandler::parse_message(std::string message) {
   }
   // Get HTTP version
   msg_stream >> request.version;
-  // Get headers
+  // Remove remaining CRLF from request-line
+  std::getline(msg_stream, url);
+  // Get headers fields
   std::map<std::string, std::string> headers;
   std::string header, field_name, field_value;
   std::size_t found;
-  // To remove remaining CRLF from request-line
-  std::getline(msg_stream, header);
   header = "";
   while (true) {
     std::getline(msg_stream, header);
@@ -112,6 +108,21 @@ HttpRequest HttpHandler::parse_message(std::string message) {
     }  
   }
   request.headers = headers;
+  // To remove remaining CRLF from http header
+  std::getline(msg_stream, header);
+}
+
+HttpRequest HttpHandler::parse_message(std::string message) {
+  std::stringstream msg_stream;
+  msg_stream.str(message);
+  HttpRequest request;
+  parse_msg_header(msg_stream, request);
+  // If POST query is in body
+  if (request.method == POST) {
+    std::string body;
+    std::getline(msg_stream, body);
+    request.query = url::decode(body);
+  }
   return request;
 }
 
@@ -129,9 +140,16 @@ HttpResponse HttpHandler::create_response(
   // Check HTTP method and check for valid file path
   switch (request.method) {
     case GET:
+    case POST:
       this->map_and_find_resource(request, www_dir_path, response);
       break;
-    // Unimplemented methods result in 505 response.
+    case OPTIONS:
+    case HEAD:
+    case DELETE:
+    case TRACE:
+    case CONNECT:
+      response.status = NOT_IMPLEMENTED;
+      break;
     case UNKNOWN:
     default:
       response.status = INTERNAL_ERROR;

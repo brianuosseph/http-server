@@ -18,6 +18,8 @@ private:
   void map_and_find_resource(HttpRequest& request,
                              std::string& www_dir_path,
                              HttpResponse& response);
+  void parse_msg_header(std::stringstream& stream,
+                        HttpRequest& request);
 };
 
 std::string trim(std::string& str);

@@ -7,9 +7,6 @@
 #include <stdlib.h>
 
 // TODO:
-//  - Add POST support
-//    - This requires URL/Percent coding implementation
-//    - POST supported CGI scripts take in variables from stdin
 //  - Implement persistent connections
 //    - Apache uses a 5 second timeout
 //  - Refactor
@@ -200,14 +197,20 @@ void WebServer::run() {
         = handler_.create_response(request, web_directory_path_);
       
       // Send response
-      std::size_t ext_start = response.resource_path.find_last_of(".");
-      std::string extension = response.resource_path
-                              .substr(ext_start + 1);
-      if (extension == "cgi") {
-        respond_with_cgi_script(response, request.headers);
+      if (static_cast<int>(response.status) >= 400) {
+        std::string error_msg = response.create_message_header();
+        send_message(error_msg);
       }
       else {
-        respond_with_static_page(response);        
+        std::size_t ext_start = response.resource_path.find_last_of(".");
+        std::string extension = response.resource_path
+                                .substr(ext_start + 1);
+        if (extension == "cgi") {
+          respond_with_cgi_script(response, request.headers);
+        }
+        else {
+          respond_with_static_page(response);        
+        }
       }
 
       // TODO: Persistent connections
@@ -235,11 +238,13 @@ std::string WebServer::get_message() {
     bytes_recieved = recv(client_socket_, message_buffer_, MSG_BUF_LEN, 0);
     if (bytes_recieved == -1) {
       perror("Error getting message");
+      close(client_socket_);
       exit(1);
     }
     if (bytes_recieved == 0) {
       std::cout << client_ip_ << " closed connection";
-      break;
+      close(client_socket_);
+      exit(0);
     }
     if (bytes_recieved < MSG_BUF_LEN) {
       for (int i = 0; i < bytes_recieved; ++i) {
@@ -269,7 +274,7 @@ void WebServer::send_message(std::string message) {
     bytes_sent = send(client_socket_, message.c_str(), message_len, 0);
     if (bytes_sent == -1) {
       perror("Error sending message");
-      break;
+      close(client_socket_);
       exit(1);
     }
     else {
